@@ -1,0 +1,6 @@
+{
+  "name": "HUMANSENSE AI",
+  "description": "Real-time human rapid movement detection prototype using YOLO pose and mathematical keypoint displacement analysis.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

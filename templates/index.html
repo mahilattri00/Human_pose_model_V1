@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HUMANSENSE AI — Human Rapid Movement Detection</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Global App Shell -->
+  <div class="app-container">
+    
+    <!-- Top Navigation Header -->
+    <header class="app-header" id="app-header">
+      <div class="header-brand">
+        <div class="brand-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+        </div>
+        <div>
+          <h1 class="brand-title">HUMANSENSE AI</h1>
+          <p class="brand-subtitle">Human Movement Analysis & Rapid Kinematics</p>
+        </div>
+      </div>
+
+      <div class="header-status-group">
+        <div id="demo-badge" class="badge-demo hidden">DEMO MODE — SIMULATED DATA</div>
+        <div id="system-status-pill" class="status-pill status-standby">
+          <span class="status-indicator"></span>
+          <span id="system-status-text">SYSTEM STANDBY</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Alert Banner -->
+    <div id="alert-banner" class="alert-banner hidden">
+      <div class="alert-content">
+        <div class="alert-icon-wrap">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+        </div>
+        <div>
+          <div class="alert-title">RAPID MOVEMENT DETECTED</div>
+          <div class="alert-desc" id="alert-desc-text">High-velocity kinematic displacement confirmed on Person 01</div>
+        </div>
+      </div>
+      <button id="btn-banner-reset" class="btn-alert-reset">Dismiss Alert</button>
+    </div>
+
+    <!-- Error Banner for Model or Camera -->
+    <div id="error-banner" class="error-banner hidden">
+      <div class="error-content">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <span id="error-text">Camera offline or model missing.</span>
+      </div>
+      <button id="btn-error-demo" class="btn-subtle">Switch to Demo Mode</button>
+    </div>
+
+    <!-- Dashboard Content Layout Grid -->
+    <main class="dashboard-grid">
+      
+      <!-- Left Column: Primary Video Canvas & Movement Graph -->
+      <section class="viewport-section" id="viewport-section">
+        
+        <!-- Main Camera Card -->
+        <div class="camera-card" id="camera-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="panel-tag">LIVE FEED</span>
+              <h2 class="card-title">Pose & Kinematics Viewport</h2>
+            </div>
+            <div class="feed-stats">
+              <span class="stat-pill"><span class="stat-dim">FPS:</span> <strong id="val-fps">0</strong></span>
+              <span class="stat-pill"><span class="stat-dim">RES:</span> <strong>640x480</strong></span>
+            </div>
+          </div>
+
+          <div class="video-container" id="video-container">
+            <!-- MJPEG Backend Stream or In-Browser Client Camera Canvas -->
+            <img id="stream-img" src="/video_feed" alt="Live Camera MJPEG Stream" class="video-stream">
+            <video id="client-video" playsinline muted autoplay class="client-video hidden"></video>
+            <canvas id="client-canvas" class="client-canvas hidden"></canvas>
+
+            <!-- Video Overlay Watermark / HUD -->
+            <div class="video-hud">
+              <div class="hud-item">
+                <span class="hud-dot"></span>
+                <span>YOLO26n-Pose 17-Keypoint Tracker</span>
+              </div>
+              <div id="hud-latency" class="hud-item hud-mono">LATENCY: &lt;35ms</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Movement Kinematics Graph -->
+        <div class="graph-card" id="graph-card">
+          <div class="card-header">
+            <div>
+              <span class="panel-tag">TEMPORAL ANALYSIS</span>
+              <h3 class="card-title">Real-Time Movement Kinematics Score</h3>
+            </div>
+            <div class="graph-legend">
+              <span class="legend-item"><span class="legend-dot dot-score"></span> Smoothed Score</span>
+              <span class="legend-item"><span class="legend-line line-rapid"></span> Rapid Threshold (<span id="lbl-rapid-thresh">65</span>)</span>
+            </div>
+          </div>
+          
+          <div class="graph-wrapper">
+            <canvas id="movement-chart" width="700" height="140"></canvas>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- Right Column: Telemetry Side Panel & Person Matrix -->
+      <aside class="sidebar-section" id="sidebar-section">
+        
+        <!-- Primary Metrics Overview Matrix -->
+        <div class="metrics-grid">
+          <div class="metric-card" id="card-people">
+            <span class="metric-label">PEOPLE DETECTED</span>
+            <div class="metric-value-row">
+              <span class="metric-number" id="val-people-count">0</span>
+              <span class="metric-unit">MAX 5</span>
+            </div>
+          </div>
+
+          <div class="metric-card" id="card-movement-state">
+            <span class="metric-label">CURRENT MOVEMENT</span>
+            <div class="state-badge-container">
+              <span id="val-primary-state" class="state-pill pill-normal">NORMAL</span>
+            </div>
+          </div>
+
+          <div class="metric-card" id="card-score">
+            <span class="metric-label">MOVEMENT SCORE</span>
+            <div class="metric-value-row">
+              <span class="metric-number" id="val-primary-score">0.0</span>
+              <span class="metric-unit">pts</span>
+            </div>
+          </div>
+
+          <div class="metric-card" id="card-confidence">
+            <span class="metric-label">AVG CONFIDENCE</span>
+            <div class="metric-value-row">
+              <span class="metric-number" id="val-confidence">0%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Person List Section -->
+        <div class="panel-card person-list-card" id="person-list-card">
+          <div class="panel-header">
+            <h3 class="panel-title">Tracked Individuals</h3>
+            <span class="badge-count" id="badge-track-count">0 Active</span>
+          </div>
+
+          <div id="person-container" class="person-container">
+            <div class="empty-state" id="empty-person-state">
+              <p>No persons currently detected in frame</p>
+              <span class="empty-sub">Start camera or activate Demo Mode to simulate subjects</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Controls Section -->
+        <div class="panel-card controls-card" id="controls-card">
+          <div class="panel-header">
+            <h3 class="panel-title">System Controls</h3>
+          </div>
+
+          <div class="control-actions">
+            <button id="btn-start" class="btn btn-primary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
+              START CAMERA
+            </button>
+            <button id="btn-stop" class="btn btn-secondary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="6" y="6" width="12" height="12"></rect>
+              </svg>
+              STOP CAMERA
+            </button>
+            <button id="btn-reset-alert" class="btn btn-secondary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+                <path d="M21 3v5h-5"></path>
+                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
+                <path d="M8 16H3v5"></path>
+              </svg>
+              RESET ALERT
+            </button>
+            <button id="btn-demo" class="btn btn-demo">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="14.31" y1="8" x2="20.05" y2="17.94"></line>
+                <line x1="9.69" y1="8" x2="21.17" y2="8"></line>
+                <line x1="7.38" y1="12" x2="13.12" y2="2.06"></line>
+              </svg>
+              DEMO MODE
+            </button>
+          </div>
+
+          <!-- Sound alert toggle -->
+          <div class="toggle-row">
+            <label class="toggle-label" for="chk-sound">
+              <input type="checkbox" id="chk-sound" checked>
+              <span>Audio Warning Tone on Rapid Movement</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Calibration & Parameters Section -->
+        <div class="panel-card calibration-card" id="calibration-card">
+          <details class="calibration-details">
+            <summary class="panel-header calibration-summary">
+              <h3 class="panel-title">Threshold Calibration</h3>
+              <span class="accordion-icon">▼</span>
+            </summary>
+            
+            <div class="calibration-body">
+              <p class="cal-note">
+                Calibrate thresholds based on optical camera distance and frame rate.
+              </p>
+
+              <div class="param-row">
+                <div class="param-header">
+                  <label for="slider-normal">Normal Threshold</label>
+                  <span id="lbl-val-normal" class="param-val">25.0</span>
+                </div>
+                <input type="range" id="slider-normal" min="5" max="50" step="1" value="25">
+              </div>
+
+              <div class="param-row">
+                <div class="param-header">
+                  <label for="slider-rapid">Rapid Movement Threshold</label>
+                  <span id="lbl-val-rapid" class="param-val">65.0</span>
+                </div>
+                <input type="range" id="slider-rapid" min="30" max="120" step="1" value="65">
+              </div>
+
+              <div class="param-row">
+                <div class="param-header">
+                  <label for="slider-smoothing">Smoothing Window</label>
+                  <span id="lbl-val-smoothing" class="param-val">5 frames</span>
+                </div>
+                <input type="range" id="slider-smoothing" min="1" max="15" step="1" value="5">
+              </div>
+
+              <div class="param-row">
+                <div class="param-header">
+                  <label for="slider-confirm">Confirmation Duration</label>
+                  <span id="lbl-val-confirm" class="param-val">5 frames</span>
+                </div>
+                <input type="range" id="slider-confirm" min="2" max="15" step="1" value="5">
+              </div>
+
+              <button id="btn-save-cal" class="btn btn-subtle btn-block">Apply Calibration</button>
+            </div>
+          </details>
+        </div>
+
+        <!-- Future Roadmap Section -->
+        <div class="panel-card roadmap-card" id="roadmap-card">
+          <div class="panel-header">
+            <h3 class="panel-title">Technology Roadmap</h3>
+          </div>
+          <div class="roadmap-timeline">
+            <div class="roadmap-step current">
+              <span class="step-tag active-tag">V1 — CURRENT</span>
+              <div class="step-title">RGB Webcam + Pose + Rapid Movement</div>
+              <p class="step-desc">YOLO26n-Pose 17-keypoint normalized kinematic displacement.</p>
+            </div>
+            <div class="roadmap-step">
+              <span class="step-tag future-tag">V2 — FUTURE</span>
+              <div class="step-title">Custom Movement Dataset + Temporal Classifier</div>
+            </div>
+            <div class="roadmap-step">
+              <span class="step-tag future-tag">V3 — FUTURE</span>
+              <div class="step-title">Thermal Imaging Integration</div>
+            </div>
+            <div class="roadmap-step">
+              <span class="step-tag future-tag">V4 — FUTURE</span>
+              <div class="step-title">60 GHz mmWave Radar Spatial Tracking</div>
+            </div>
+            <div class="roadmap-step">
+              <span class="step-tag future-tag">V5 — FUTURE</span>
+              <div class="step-title">Raspberry Pi Edge Accelerator Deployment</div>
+            </div>
+          </div>
+        </div>
+
+      </aside>
+
+    </main>
+
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
